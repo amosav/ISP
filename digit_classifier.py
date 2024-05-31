@@ -35,6 +35,12 @@ def self_check_fft_stft():
 
     Include all plots in your PDF
     """
+    wave_1khz = create_single_sin_wave(1000, 3, 16000).unsqueeze(0)
+    wave_3khz = create_single_sin_wave(3000, 3, 16000).unsqueeze(0)
+    wave_1khz_3khz = wave_1khz + wave_3khz
+    waves = torch.concatenate([wave_1khz.unsqueeze(0), wave_3khz.unsqueeze(0), wave_1khz_3khz.unsqueeze(0)], dim=0)
+    plot_fft(waves)
+    plot_spectrogram(waves)
     raise NotImplementedError
 
 

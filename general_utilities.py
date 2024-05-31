@@ -55,12 +55,20 @@ def do_stft(wav: torch.Tensor, n_fft: int=1024) -> torch.Tensor:
 
     returns: torch.tensor of the shape (1, n_fft, *, 2) or (B, 1, n_fft, *, 2), where last dim stands for real/imag entries.
     """
-    stft_tensor = torch.stft(input=wav,
-                             n_fft=n_fft,
-                             win_length=n_fft,
-                             hop_length=n_fft//4,
-                             return_complex=True)
-    return torch.view_as_real(stft_tensor)
+    if len(wav.shape) == 2:
+        wav = wav.unsqueeze(0)
+    all_stft = []
+    for i in range(wav.shape[0]):
+        cur_stft = torch.stft(input=wav[i],
+                              n_fft=n_fft,
+                              win_length=n_fft,
+                              hop_length=n_fft//4,
+                              return_complex=True)
+        all_stft.append(cur_stft)
+    final_stft = torch.cat(all_stft, dim=0)
+    if final_stft.shape[0] > 1:
+        final_stft = final_stft.unsqueeze(1)
+    return torch.view_as_real(final_stft)
 
 
 
@@ -112,15 +120,16 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
     sampled_wav = librosa.samples_to_time(wav, sr=sr)
     stft_tensor = do_stft(torch.tensor(sampled_wav), n_fft)
     magnitude = torch.sqrt(stft_tensor[..., 0]**2 + stft_tensor[..., 1]**2)
-    if (magnitude.shape) == 3:
+    if len(magnitude.shape) == 3:
         magnitude = magnitude.unsqueeze(0)
+    num_plots = magnitude.shape[0]
     for i in range(magnitude.shape[0]):
-        cur_magnitude = magnitude[i].cpu().numpy()
+        cur_magnitude = magnitude[i,0].cpu().numpy()
         cur_magnitude = librosa.amplitude_to_db(cur_magnitude)
-        plt.figure()
-        plt.imshow(cur_magnitude, aspect='auto', origin='lower')
-        plt.colorbar()
-        plt.show()
+        ax = plt.subplot(num_plots, 1, i+1)
+        ax.imshow(cur_magnitude, aspect='auto', origin='lower')
+        ax.colorbar()
+        ax.show()
 
 
 def plot_fft(wav: torch.Tensor) -> None:
@@ -136,9 +145,10 @@ def plot_fft(wav: torch.Tensor) -> None:
     magnitude = torch.abs(fft_tensor)
     if len(magnitude.shape) == 2:
         magnitude = magnitude.unsqueeze(0)
+    num_plots = magnitude.shape[0]
     for i in range(magnitude.shape[0]):
         cur_magnitude = magnitude[i, 0].cpu().numpy()
-        plt.figure()
-        plt.plot(np.arange(cur_magnitude.shape[0]), librosa.db_to_amplitude(librosa.power_to_db(cur_magnitude)),c="r")
-        plt.show()
+        ax = plt.subplot(num_plots, 1, i+1)
+        ax.plot(np.arange(cur_magnitude.shape[0]), librosa.db_to_amplitude(librosa.power_to_db(cur_magnitude)), c="r")
+    plt.show()
 
