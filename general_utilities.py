@@ -59,8 +59,7 @@ def do_stft(wav: torch.Tensor, n_fft: int=1024) -> torch.Tensor:
                              n_fft=n_fft,
                              win_length=n_fft,
                              hop_length=n_fft//4,
-                             return_complex=True
-                             )
+                             return_complex=True)
     return torch.view_as_real(stft_tensor)
 
 
@@ -116,8 +115,10 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
     if (magnitude.shape) == 3:
         magnitude = magnitude.unsqueeze(0)
     for i in range(magnitude.shape[0]):
+        cur_magnitude = magnitude[i].cpu().numpy()
+        cur_magnitude = librosa.amplitude_to_db(cur_magnitude)
         plt.figure()
-        plt.imshow(librosa.power_to_db(magnitude[i].cpu().numpy()), aspect='auto', origin='lower')
+        plt.imshow(cur_magnitude, aspect='auto', origin='lower')
         plt.colorbar()
         plt.show()
 
@@ -133,11 +134,11 @@ def plot_fft(wav: torch.Tensor) -> None:
     """
     fft_tensor = do_fft(wav)
     magnitude = torch.abs(fft_tensor)
-
     if len(magnitude.shape) == 2:
         magnitude = magnitude.unsqueeze(0)
     for i in range(magnitude.shape[0]):
+        cur_magnitude = magnitude[i, 0].cpu().numpy()
         plt.figure()
-        plt.plot(magnitude[i, 0].cpu().numpy())
+        plt.plot(np.arange(cur_magnitude.shape[0]), librosa.db_to_amplitude(librosa.power_to_db(cur_magnitude)),c="r")
         plt.show()
 
