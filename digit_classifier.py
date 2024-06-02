@@ -4,17 +4,13 @@ As all digit waveforms are given, we could take that under consideration, of our
 
 We reccomend you answer this after filling all functions in general_utilities.
 """
-import torchaudio as ta
-import soundfile as sf
-import torch
-import typing as tp
-from pathlib import Path
-import librosa
-import matplotlib.pyplot as plt
-import scipy
 import numpy as np
+
 from general_utilities import *
 
+ROW_COL_DICT = get_row_col_dict()
+IND_TO_DIGIT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 11]
+SPACE = -1
 # --------------------------------------------------------------------------------------------------
 #     Part A        Part A        Part A        Part A        Part A        Part A        Part A    
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -41,7 +37,6 @@ def self_check_fft_stft():
     waves = torch.concatenate([wave_1khz.unsqueeze(0), wave_3khz.unsqueeze(0), wave_1khz_3khz.unsqueeze(0)], dim=0)
     plot_fft(waves)
     plot_spectrogram(waves)
-    raise NotImplementedError
 
 
 def audio_check_fft_stft():
@@ -56,7 +51,10 @@ def audio_check_fft_stft():
 
     Include all plots in your PDF
     """
-    raise NotImplementedError
+    phone_waves, sample_rate = load_phone_digits_waves()
+    plot_fft(phone_waves[:2].unsqueeze(1))
+    plot_spectrogram(phone_waves.unsqueeze(1), n_fft=1024, sr=sample_rate)
+
 
 
 # --------------------------------------------------------------------------------------------------
@@ -77,7 +75,20 @@ def classify_single_digit(wav: torch.Tensor) -> int:
 
     return: int, digit number
     """
-    raise NotImplementedError
+    # this is not exactly if - else but it is base on cases.
+    wav_fft = do_fft(wav)
+    return get_number_from_fft(wav_fft)
+
+
+def get_number_from_fft(wav_fft):
+    peaks, _ = find_peaks(wav_fft.squeeze().numpy(), height=2)
+    row_peak = min(peaks)
+    col_peak = max(peaks)
+    row_peaks = np.array(list(ROW_COL_DICT["row"].keys()))
+    col_peaks = np.array(list(ROW_COL_DICT["col"].keys()))
+    row_ind = np.argmin(np.abs(row_peaks - row_peak))
+    col_ind = np.argmin(np.abs(col_peaks - col_peak))
+    return IND_TO_DIGIT[row_ind * 3 + col_ind]
 
 
 def classify_digit_stream(wav: torch.Tensor) -> tp.List[int]:
@@ -96,5 +107,12 @@ def classify_digit_stream(wav: torch.Tensor) -> tp.List[int]:
 
     return: List[int], all integers pressed (in order).
     """
-    raise NotImplementedError
-    
+    stft_tensor = do_stft(wav, 1024)
+    magnitude = stft_tensor[..., 0]**2 + stft_tensor[..., 1]**2
+    magnitude = magnitude.squeeze(0).cpu().numpy().T
+    numbers = []
+    for window in magnitude:
+        if np.all(window == 0):
+            numbers.append(SPACE)
+            continue
+        numbers.append(get_number_from_fft(torch.tensor(window)))
