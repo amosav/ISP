@@ -43,7 +43,7 @@ def load_wav(abs_path: tp.Union[str, Path]) -> tp.Tuple[torch.Tensor, int]:
     waveform, sample_rate = ta.load(abs_path)
     return torch.tensor(waveform).cpu().unsqueeze(0), sample_rate
 
-def do_stft(wav: torch.Tensor, n_fft: int = 1024) -> torch.Tensor:
+def do_stft(wav: torch.Tensor, n_fft: int=1024) -> torch.Tensor:
     """
     This function performs STFT using win_length=n_fft and hop_length=n_fft//4.
     Should return the complex spectrogram.
@@ -56,7 +56,7 @@ def do_stft(wav: torch.Tensor, n_fft: int = 1024) -> torch.Tensor:
     returns: torch.tensor of the shape (1, n_fft, *, 2) or (B, 1, n_fft, *, 2), where last dim stands for real/imag entries.
     """
     if len(wav.shape) == 2:
-        wav = wav.unsqueeze(0)
+        wav = wav.unsqueeze(1)
     all_stft = []
     for i in range(wav.shape[0]):
         cur_stft = torch.stft(input=wav[i],
@@ -86,12 +86,12 @@ def do_istft(spec: torch.Tensor, n_fft: int=1024) -> torch.Tensor:
 
     NOTE: you may need to use torch.view_as_complex.
     """
-    istft_tensor = torch.istft(input=spec,
+    istft_tensor = torch.istft(input=torch.view_as_complex(spec),
                                  n_fft=n_fft,
                                  win_length=n_fft,
                                  hop_length=n_fft//4,
-                                 return_complex=True)
-    return istft_tensor.view_as_complex()
+                                 return_complex=False)
+    return istft_tensor
 
 
 def do_fft(wav: torch.Tensor) -> torch.Tensor:
@@ -126,13 +126,12 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
     num_plots = magnitude.shape[0]
     for i in range(magnitude.shape[0]):
         cur_magnitude = magnitude[i, 0].cpu().numpy()
-        cur_magnitude = librosa.amplitude_to_db(cur_magnitude)
         ax = plt.subplot(num_plots, 1, i+1)
         ax.imshow(cur_magnitude, aspect='auto', origin='lower')
     plt.show()
 
 
-def plot_fft(wav: torch.Tensor) -> None:
+def plot_fft(wav: torch.Tensor, sr) -> None:
     """
     This function plots the FFT transform to a given waveform.
     The X axis should include frequencies in Hz.
@@ -153,26 +152,23 @@ def plot_fft(wav: torch.Tensor) -> None:
         ax.plot(np.arange(cur_magnitude.shape[0]), librosa.db_to_amplitude(librosa.power_to_db(cur_magnitude)), c="r")
     plt.show()
 
-def load_phone_digits_waves():
+def get_row_col_dict():
     phone_waves = []
     for i in range(12):
-        cur_wave, sample_rate = load_wav(f'../audio_files/phone_digits_8k/phone_{i}.wav')
+        cur_wave, sample_rate = load_wav(f'/cs/usr/amosav/PycharmProjects/ISP/audio_files/phone_digits_8k/phone_{i}.wav')
         phone_waves.append(cur_wave)
-    phone_waves = torch.cat(phone_waves, dim=0)
-    return phone_waves, sample_rate
+    phone_waves = torch.cat(phone_waves, dim=1).squeeze(0)
 
-def get_row_col_dict():
-    phone_waves, sample_rate = load_phone_digits_waves()
-    phone_waves_fft = do_fft(phone_waves.unsqueeze(1))
+    phone_waves_fft = do_fft(phone_waves)
     peakse_dict = {}
     for idx, digit_fft in enumerate(phone_waves_fft):
         curr_digit_fft = digit_fft.squeeze().numpy()
         peaks, _ = find_peaks(curr_digit_fft, height=2)
-        peakse_dict[idx] = peaks
-    row_indices = {1: peakse_dict[1][0],
-                   2: peakse_dict[4][0],
-                   3: peakse_dict[7][0],
-                   4: peakse_dict[10][0]}
-    row_indices = {peakse_dict[(i * 3) + 1][0]: i for i in range(4)}
-    col_indices = {peakse_dict[i + 1][1]: i for i in range(3)}
+        peakse_dict[idx] = [peaks[0] / len(curr_digit_fft), peaks[-1] / len(curr_digit_fft)]
+    row_indices = {np.round(peakse_dict[(i * 3) + 1][0], 6): i for i in range(4)}
+    col_indices = {np.round(peakse_dict[i + 1][1], 6): i for i in range(3)}
     return {"row": row_indices, "col": col_indices}
+
+
+if __name__ == '__main__':
+    get_row_col_dict()
