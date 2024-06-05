@@ -26,8 +26,8 @@ def self_check_fft_stft():
     """
     Q:
     1. create 1KHz and 3Khz sine waves, each of 3 seconds length with a sample rate of 16KHz.
-    2. In a single plot (3 subplots), plot (i) FFT(sine(1Khz)) (ii) FFT(sine(3Khz)), 
-       (iii) FFT(sine(1Khz) + sine(3Khz)), make sure X axis shows frequencies. 
+    2. In a single plot (3 subplots), plot (i) FFT(sine(1Khz)) (ii) FFT(sine(3Khz)),
+       (iii) FFT(sine(1Khz) + sine(3Khz)), make sure X axis shows frequencies.
        Use general_utilities.plot_fft
     3. concatate [sine(1Khz), sine(3Khz), sine(1Khz) + sine(3Khz)] along the temporal axis, and plot
        the corresponding MAGNITUDE STFT using n_fft=1024. Make sure Y ticks are frequencies and X
@@ -35,13 +35,12 @@ def self_check_fft_stft():
 
     Include all plots in your PDF
     """
-    wave_1khz = create_single_sin_wave(1000, 3, 16000).unsqueeze(0)
-    wave_3khz = create_single_sin_wave(3000, 3, 16000).unsqueeze(0)
+    wave_1khz = create_single_sin_wave(1000, 1, 16000).unsqueeze(0)
+    wave_3khz = create_single_sin_wave(3000, 1, 16000).unsqueeze(0)
     wave_1khz_3khz = wave_1khz + wave_3khz
     waves = torch.concatenate([wave_1khz.unsqueeze(0), wave_3khz.unsqueeze(0), wave_1khz_3khz.unsqueeze(0)], dim=0)
     plot_fft(waves)
     plot_spectrogram(waves)
-    raise NotImplementedError
 
 
 def audio_check_fft_stft():

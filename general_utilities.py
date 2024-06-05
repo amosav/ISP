@@ -36,14 +36,13 @@ def load_wav(abs_path: tp.Union[str, Path]) -> tp.Tuple[torch.Tensor, int]:
 
     abs_path: path to the audio file (str or Path)
     returns: (waveform, sample_rate)
-        waveform: torch.Tensor (float) of shape [1, num_channels]
+        waveform: torch.Tensor (float) of shape [num_channels, T]
         sample_rate: int, the corresponding sample rate
     """
-    waveform, sample_rate = librosa.load(abs_path)
+    waveform, sample_rate = ta.load(abs_path)
     return torch.tensor(waveform).cpu().unsqueeze(0), sample_rate
 
-
-def do_stft(wav: torch.Tensor, n_fft: int=1024) -> torch.Tensor:
+def do_stft(wav: torch.Tensor, n_fft: int = 1024) -> torch.Tensor:
     """
     This function performs STFT using win_length=n_fft and hop_length=n_fft//4.
     Should return the complex spectrogram.
@@ -63,12 +62,12 @@ def do_stft(wav: torch.Tensor, n_fft: int=1024) -> torch.Tensor:
                               n_fft=n_fft,
                               win_length=n_fft,
                               hop_length=n_fft//4,
-                              return_complex=True)
+                              return_complex=False)
         all_stft.append(cur_stft)
     final_stft = torch.cat(all_stft, dim=0)
     if final_stft.shape[0] > 1:
         final_stft = final_stft.unsqueeze(1)
-    return torch.view_as_real(final_stft)
+    return final_stft
 
 
 
@@ -117,6 +116,7 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
 
     NOTE: for the batched case multiple plots should be generated (sequentially by order in batch)
     """
+    plt.figure()
     sampled_wav = librosa.samples_to_time(wav, sr=sr)
     stft_tensor = do_stft(torch.tensor(sampled_wav), n_fft)
     magnitude = torch.sqrt(stft_tensor[..., 0]**2 + stft_tensor[..., 1]**2)
@@ -128,9 +128,7 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
         cur_magnitude = librosa.amplitude_to_db(cur_magnitude)
         ax = plt.subplot(num_plots, 1, i+1)
         ax.imshow(cur_magnitude, aspect='auto', origin='lower')
-        ax.colorbar()
-        ax.show()
-
+    plt.show()
 
 def plot_fft(wav: torch.Tensor) -> None:
     """
