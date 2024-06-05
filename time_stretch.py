@@ -30,8 +30,10 @@ def naive_time_stretch_temporal(wav: torch.Tensor, factor:float):
 
     Do NOT include saved audio in your submission.
     """
-    raise NotImplementedError
-
+    if wav.dim() == 2:
+        wav = wav.unsqueeze(0)
+    interpolated_wav = interpolate(wav, scale_factor=factor, mode='linear')
+    return interpolated_wav
 
 def naive_time_stretch_stft(wav: torch.Tensor, factor:float):
     """
@@ -48,4 +50,13 @@ def naive_time_stretch_stft(wav: torch.Tensor, factor:float):
 
     Do NOT include saved audio in your submission.
     """
-    raise NotImplementedError
+    stft_wav = do_stft(wav)
+
+if __name__ == '__main__':
+    wav, sr = load_wav("audio_files/Basta_16k.wav")
+    stretched_wav = naive_time_stretch_temporal(wav, 1.2)
+    ta.save("audio_files/Basta_16k_stretched_1.2.wav", stretched_wav.squeeze(0), sr)
+    stretched_wav = naive_time_stretch_temporal(wav, 0.8)
+    ta.save("audio_files/Basta_16k_stretched_0.8.wav", stretched_wav.squeeze(0), sr)
+    stretched_wav = naive_time_stretch_temporal(wav, 0.5)
+    ta.save("audio_files/Basta_16k_stretched_stft_0.5.wav", stretched_wav.squeeze(0), sr)

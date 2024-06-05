@@ -21,6 +21,7 @@ import librosa
 import matplotlib.pyplot as plt
 import scipy
 import numpy as np
+from scipy.signal import find_peaks
 
 
 def create_single_sin_wave(frequency_in_hz, total_time_in_secs=3, sample_rate=16000):
@@ -130,6 +131,7 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
         ax.imshow(cur_magnitude, aspect='auto', origin='lower')
     plt.show()
 
+
 def plot_fft(wav: torch.Tensor) -> None:
     """
     This function plots the FFT transform to a given waveform.
@@ -139,6 +141,7 @@ def plot_fft(wav: torch.Tensor) -> None:
 
     wav: torch tensor of the shape (1, T) or (B, 1, T) for the batched case.
     """
+    plt.figure()
     fft_tensor = do_fft(wav)
     magnitude = torch.abs(fft_tensor)
     if len(magnitude.shape) == 2:
@@ -150,3 +153,26 @@ def plot_fft(wav: torch.Tensor) -> None:
         ax.plot(np.arange(cur_magnitude.shape[0]), librosa.db_to_amplitude(librosa.power_to_db(cur_magnitude)), c="r")
     plt.show()
 
+def load_phone_digits_waves():
+    phone_waves = []
+    for i in range(12):
+        cur_wave, sample_rate = load_wav(f'../audio_files/phone_digits_8k/phone_{i}.wav')
+        phone_waves.append(cur_wave)
+    phone_waves = torch.cat(phone_waves, dim=0)
+    return phone_waves, sample_rate
+
+def get_row_col_dict():
+    phone_waves, sample_rate = load_phone_digits_waves()
+    phone_waves_fft = do_fft(phone_waves.unsqueeze(1))
+    peakse_dict = {}
+    for idx, digit_fft in enumerate(phone_waves_fft):
+        curr_digit_fft = digit_fft.squeeze().numpy()
+        peaks, _ = find_peaks(curr_digit_fft, height=2)
+        peakse_dict[idx] = peaks
+    row_indices = {1: peakse_dict[1][0],
+                   2: peakse_dict[4][0],
+                   3: peakse_dict[7][0],
+                   4: peakse_dict[10][0]}
+    row_indices = {peakse_dict[(i * 3) + 1][0]: i for i in range(4)}
+    col_indices = {peakse_dict[i + 1][1]: i for i in range(3)}
+    return {"row": row_indices, "col": col_indices}
