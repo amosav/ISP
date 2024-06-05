@@ -34,7 +34,7 @@ def self_check_fft_stft():
     wave_1khz = create_single_sin_wave(1000, 3, 16000).unsqueeze(0)
     wave_3khz = create_single_sin_wave(3000, 3, 16000).unsqueeze(0)
     wave_1khz_3khz = wave_1khz + wave_3khz
-    waves = torch.concatenate([wave_1khz.unsqueeze(0), wave_3khz.unsqueeze(0), wave_1khz_3khz.unsqueeze(0)], dim=0)
+    waves = torch.concatenate([wave_1khz.unsqueeze(0), wave_3khz.unsqueeze(0), wave_1khz_3khz.unsqueeze(0)], dim=-1)
     plot_fft(waves)
     plot_spectrogram(waves)
 
@@ -51,9 +51,13 @@ def audio_check_fft_stft():
 
     Include all plots in your PDF
     """
-    phone_waves, sample_rate = load_phone_digits_waves()
-    plot_fft(phone_waves[:2].unsqueeze(1))
-    plot_spectrogram(phone_waves.unsqueeze(1), n_fft=1024, sr=sample_rate)
+    phone_waves = []
+    for i in range(0, 12):
+        cur_wave, sample_rate = load_wav(f'/cs/usr/amosav/PycharmProjects/ISP/audio_files/phone_digits_8k/phone_{i}.wav')
+        phone_waves.append(cur_wave)
+    all_waves = torch.cat(phone_waves, dim=-1).squeeze(0)
+    plot_fft(torch.cat(phone_waves[1:3], dim=0))
+    plot_spectrogram(all_waves, n_fft=128, sr=sample_rate)
 
 
 
@@ -82,8 +86,8 @@ def classify_single_digit(wav: torch.Tensor) -> int:
 
 def get_number_from_fft(wav_fft):
     peaks, _ = find_peaks(wav_fft.squeeze().numpy(), height=2)
-    row_peak = min(peaks)
-    col_peak = max(peaks)
+    row_peak = min(peaks) / len(wav_fft)
+    col_peak = max(peaks) / len(wav_fft)
     row_peaks = np.array(list(ROW_COL_DICT["row"].keys()))
     col_peaks = np.array(list(ROW_COL_DICT["col"].keys()))
     row_ind = np.argmin(np.abs(row_peaks - row_peak))
@@ -100,7 +104,7 @@ def classify_digit_stream(wav: torch.Tensor) -> tp.List[int]:
     padding in-between digits.
     You can assume that there will be at least 100ms of zero padding between digits
     The function should return a list of all integers pressed (in order).
-    
+
     Use STFT from general_utilities file to answer this question.
 
     wav: torch tensor of the shape (1, T).
@@ -116,3 +120,10 @@ def classify_digit_stream(wav: torch.Tensor) -> tp.List[int]:
             numbers.append(SPACE)
             continue
         numbers.append(get_number_from_fft(torch.tensor(window)))
+    numbers_tuple = []
+    curr_num = SPACE
+    for val in numbers:
+        if val != SPACE and val != curr_num:
+            numbers_tuple.append(val)
+            curr_num = val
+    return numbers_tuple
