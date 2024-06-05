@@ -125,7 +125,7 @@ def plot_spectrogram(wav: torch.Tensor, n_fft: int=1024, sr=16000) -> None:
         magnitude = magnitude.unsqueeze(0)
     num_plots = magnitude.shape[0]
     for i in range(magnitude.shape[0]):
-        cur_magnitude = magnitude[i,0].cpu().numpy()
+        cur_magnitude = magnitude[i, 0].cpu().numpy()
         cur_magnitude = librosa.amplitude_to_db(cur_magnitude)
         ax = plt.subplot(num_plots, 1, i+1)
         ax.imshow(cur_magnitude, aspect='auto', origin='lower')
